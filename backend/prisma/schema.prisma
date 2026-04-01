@@ -1,0 +1,82 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  MENTOR
+  ADMIN
+}
+
+enum CallType {
+  RESUME_REVAMP
+  JOB_MARKET_GUIDANCE
+  MOCK_INTERVIEW
+}
+
+model User {
+  id          String   @id @default(uuid())
+  name        String
+  email       String   @unique
+  password    String
+  role        Role     @default(USER)
+  timezone    String   @default("UTC")
+  tags        String[] @default([])
+  description String   @default("")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  availabilityAsUser   Availability[] @relation("UserAvailability")
+  availabilityAsMentor Availability[] @relation("MentorAvailability")
+  meetingsAsAdmin      Meeting[]      @relation("AdminMeetings")
+  meetingsAsUser       Meeting[]      @relation("UserMeetings")
+  meetingsAsMentor     Meeting[]      @relation("MentorMeetings")
+}
+
+model Availability {
+  id        String   @id @default(uuid())
+  userId    String?  @map("user_id")
+  mentorId  String?  @map("mentor_id")
+  role      Role
+  date      DateTime @db.Date
+  startTime DateTime @map("start_time")
+  endTime   DateTime @map("end_time")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user   User? @relation("UserAvailability", fields: [userId], references: [id], onDelete: Cascade)
+  mentor User? @relation("MentorAvailability", fields: [mentorId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date, startTime], map: "availabilities_user_id_date_start_time_key")
+  @@unique([mentorId, date, startTime], map: "availabilities_mentor_id_date_start_time_key")
+  @@index([userId], map: "availabilities_user_id_idx")
+  @@index([mentorId], map: "availabilities_mentor_id_idx")
+  @@index([role], map: "availabilities_role_idx")
+  @@index([date], map: "availabilities_date_idx")
+  @@index([userId, date], map: "availabilities_user_id_date_idx")
+  @@index([mentorId, date], map: "availabilities_mentor_id_date_idx")
+  @@index([role, date], map: "availabilities_role_date_idx")
+  @@map("availabilities")
+}
+
+model Meeting {
+  id        String   @id @default(uuid())
+  adminId   String   @map("admin_id")
+  userId    String   @map("user_id")
+  mentorId  String   @map("mentor_id")
+  title     String
+  callType  CallType @map("call_type")
+  startTime DateTime @map("start_time")
+  endTime   DateTime @map("end_time")
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  admin  User @relation("AdminMeetings", fields: [adminId], references: [id], onDelete: Cascade)
+  user   User @relation("UserMeetings", fields: [userId], references: [id], onDelete: Cascade)
+  mentor User @relation("MentorMeetings", fields: [mentorId], references: [id], onDelete: Cascade)
+
+  @@map("meetings")
+}
