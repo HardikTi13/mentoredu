@@ -41,7 +41,7 @@ export default function LoginPage({ role = "user" }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const { login, user } = useAuth();
+  const { login, commitLogin, user } = useAuth();
   const navigate = useNavigate();
 
   // If already logged in, redirect immediately
@@ -57,13 +57,15 @@ export default function LoginPage({ role = "user" }) {
     setError("");
     setLoading(true);
     try {
-      const u = await login(email.trim(), password);
+      const { user: u, token } = await login(email.trim(), password);
       if (u.role !== config.expectedRole) {
-        setError(`This portal is for ${config.title.replace(" Login", "")}s only. Your role is ${u.role}.`);
-        localStorage.removeItem("token");
+        // Wrong portal — do NOT commit the session
+        setError(`This portal is for ${config.title.replace(" Login", "")}s only. Please use the ${u.role.charAt(0) + u.role.slice(1).toLowerCase()} login tab.`);
         setLoading(false);
         return;
       }
+      // Role matches — now persist the session and redirect
+      commitLogin(u, token);
       navigate(config.redirect, { replace: true });
     } catch (err) {
       setError(err.message || "Invalid credentials. Please try again.");

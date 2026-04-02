@@ -27,11 +27,15 @@ export function AuthProvider({ children }) {
 
   useEffect(() => { loadUser(); }, [loadUser]);
 
+  // login() fetches credentials but does NOT set state yet.
+  // Call commitLogin() after role validation succeeds.
   const login = useCallback(async (email, password) => {
-    const { user: u, token } = await authApi.login({ email, password });
+    return await authApi.login({ email, password }); // returns { user, token }
+  }, []);
+
+  const commitLogin = useCallback((user, token) => {
     localStorage.setItem("token", token);
-    setUser(u);
-    return u;
+    setUser(user);
   }, []);
 
   const logout = useCallback(() => {
@@ -40,7 +44,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, refreshUser: loadUser }}>
+    <AuthContext.Provider value={{ user, loading, login, commitLogin, logout, refreshUser: loadUser }}>
       {children}
     </AuthContext.Provider>
   );
